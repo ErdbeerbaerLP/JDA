@@ -29,6 +29,7 @@ import net.dv8tion.jda.api.interactions.Interaction;
 import net.dv8tion.jda.api.utils.data.DataObject;
 import net.dv8tion.jda.internal.JDAImpl;
 import net.dv8tion.jda.internal.entities.GuildImpl;
+import net.dv8tion.jda.internal.entities.InviteImpl;
 import net.dv8tion.jda.internal.entities.MemberImpl;
 import net.dv8tion.jda.internal.entities.UserImpl;
 import net.dv8tion.jda.internal.entities.channel.concrete.PrivateChannelImpl;
@@ -79,36 +80,49 @@ public class InteractionImpl implements Interaction
         }
         else
         {
-            member = null;
             long channelId = channelJson.getUnsignedLong("id");
             ChannelType type = ChannelType.fromId(channelJson.getInt("type"));
             if (type != ChannelType.PRIVATE)
-                throw new IllegalArgumentException("Received interaction in unexpected channel type! Type " + type + " is not supported yet!");
-            PrivateChannel channel = jda.getPrivateChannelById(channelId);
-            if (channel == null)
             {
-                channel = jda.getEntityBuilder().createPrivateChannel(
-                    DataObject.empty()
-                        .put("id", channelId)
-                        .put("recipient", data.getObject("user"))
-                );
-            }
-            this.channel = channel;
+                user = jda.getEntityBuilder().createUser(data.getObject("member").getObject("user"));
+                member = new MemberImpl(null, user);
 
-            User user = channel.getUser();
-            if (user == null)
-            {
-                user = jda.getEntityBuilder().createUser(data.getObject("user"));
-                ((PrivateChannelImpl) channel).setUser(user);
-                ((UserImpl) user).setPrivateChannel(channel);
+                PrivateChannel channel = jda.getEntityBuilder().createPrivateChannel(data.getObject("channel"), (UserImpl) user);
+                if (channel == null && ChannelType.fromId(channelJson.getInt("type")).isThread());
+                if (channel == null)
+                    throw new IllegalStateException("Failed to create channel instance for interaction! Channel Type: " + channelJson.getInt("type"));
+                this.channel = channel;
             }
-            this.user = user;
+            else
+            {
+                member = null;
+                PrivateChannel channel = jda.getPrivateChannelById(channelId);
+                if (channel == null)
+                {
+                    channel = jda.getEntityBuilder().createPrivateChannel(
+                            DataObject.empty()
+                                    .put("id", channelId)
+                                    .put("recipient", data.getObject("user"))
+                    );
+                }
+                this.channel = channel;
+                User user = channel.getUser();
+                if (user == null)
+                {
+                    user = jda.getEntityBuilder().createUser(data.getObject("user"));
+                    ((PrivateChannelImpl) channel).setUser(user);
+                    ((UserImpl) user).setPrivateChannel(channel);
+                }
+                this.user = user;
+            }
         }
     }
 
     // Used to allow interaction hook to send messages after acknowledgements
     // This is implemented only in DeferrableInteractionImpl where a hook is present!
-    public synchronized void releaseHook(boolean success) {}
+    public synchronized void releaseHook(boolean success)
+    {
+    }
 
     // Ensures that one cannot acknowledge an interaction twice
     public synchronized boolean ack()

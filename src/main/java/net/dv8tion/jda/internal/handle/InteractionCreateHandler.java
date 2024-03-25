@@ -16,6 +16,7 @@
 
 package net.dv8tion.jda.internal.handle;
 
+import gnu.trove.map.hash.TLongObjectHashMap;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.channel.ChannelType;
 import net.dv8tion.jda.api.events.interaction.GenericInteractionCreateEvent;
@@ -66,7 +67,11 @@ public class InteractionCreateHandler extends SocketHandler
         if (api.getGuildSetupController().isLocked(guildId))
             return guildId;
         if (guildId != 0 && guild == null)
+            WebSocketClient.LOG.debug("Passing INTERACTION_CREATE event without guild");
+        else if (guild == null) {
+            WebSocketClient.LOG.debug("Discarding INTERACTION_CREATE event due to missing guild");
             return null; // discard event if it is not from a guild we are currently in
+        }
 
         // Check channel type
         DataObject channelJson = content.getObject("channel");
@@ -79,26 +84,26 @@ public class InteractionCreateHandler extends SocketHandler
 
         switch (InteractionType.fromKey(type))
         {
-            case COMMAND: // slash commands
-                handleCommand(content);
-                break;
-            case COMPONENT: // buttons/components
-                handleAction(content);
-                break;
-            case COMMAND_AUTOCOMPLETE:
-                api.handleEvent(
+        case COMMAND: // slash commands
+            handleCommand(content);
+            break;
+        case COMPONENT: // buttons/components
+            handleAction(content);
+            break;
+        case COMMAND_AUTOCOMPLETE:
+            api.handleEvent(
                     new CommandAutoCompleteInteractionEvent(api, responseNumber,
-                        new CommandAutoCompleteInteractionImpl(api, content)));
-                break;
-            case MODAL_SUBMIT:
-                api.handleEvent(
+                            new CommandAutoCompleteInteractionImpl(api, content)));
+            break;
+        case MODAL_SUBMIT:
+            api.handleEvent(
                     new ModalInteractionEvent(api, responseNumber,
-                        new ModalInteractionImpl(api, content)));
-                break;
-            default:
-                api.handleEvent(
+                            new ModalInteractionImpl(api, content)));
+            break;
+        default:
+            api.handleEvent(
                     new GenericInteractionCreateEvent(api, responseNumber,
-                        new InteractionImpl(api, content)));
+                            new InteractionImpl(api, content)));
         }
 
         return null;
@@ -110,18 +115,18 @@ public class InteractionCreateHandler extends SocketHandler
         {
         case SLASH:
             api.handleEvent(
-                new SlashCommandInteractionEvent(api, responseNumber,
-                    new SlashCommandInteractionImpl(api, content)));
+                    new SlashCommandInteractionEvent(api, responseNumber,
+                            new SlashCommandInteractionImpl(api, content)));
             break;
         case MESSAGE:
             api.handleEvent(
-                new MessageContextInteractionEvent(api, responseNumber,
-                    new MessageContextInteractionImpl(api, content)));
+                    new MessageContextInteractionEvent(api, responseNumber,
+                            new MessageContextInteractionImpl(api, content)));
             break;
         case USER:
             api.handleEvent(
-                new UserContextInteractionEvent(api, responseNumber,
-                    new UserContextInteractionImpl(api, content)));
+                    new UserContextInteractionEvent(api, responseNumber,
+                            new UserContextInteractionImpl(api, content)));
             break;
         }
     }
@@ -132,21 +137,21 @@ public class InteractionCreateHandler extends SocketHandler
         {
         case BUTTON:
             api.handleEvent(
-                new ButtonInteractionEvent(api, responseNumber,
-                    new ButtonInteractionImpl(api, content)));
+                    new ButtonInteractionEvent(api, responseNumber,
+                            new ButtonInteractionImpl(api, content)));
             break;
         case STRING_SELECT:
             api.handleEvent(
-                new StringSelectInteractionEvent(api, responseNumber,
-                    new StringSelectInteractionImpl(api, content)));
+                    new StringSelectInteractionEvent(api, responseNumber,
+                            new StringSelectInteractionImpl(api, content)));
             break;
         case USER_SELECT:
         case ROLE_SELECT:
         case MENTIONABLE_SELECT:
         case CHANNEL_SELECT:
             api.handleEvent(
-                new EntitySelectInteractionEvent(api, responseNumber,
-                    new EntitySelectInteractionImpl(api, content)));
+                    new EntitySelectInteractionEvent(api, responseNumber,
+                            new EntitySelectInteractionImpl(api, content)));
             break;
         }
     }
